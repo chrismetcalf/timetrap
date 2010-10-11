@@ -125,10 +125,12 @@ where COMMAND is one of:
 
     def in
       Timetrap.start unused_args, args['-a']
+      now
     end
 
     def out
       Timetrap.stop args['-a']
+      display
     end
 
     def kill

@@ -3,8 +3,9 @@ begin
   require 'timetrap'
 rescue LoadError
   if File.symlink? __FILE__
-    require File.dirname(File.readlink(__FILE__)) + '/../lib/timetrap'
+    require File.dirname(__FILE__) + '/' + File.dirname(File.readlink(File.expand_path(__FILE__))) + '/../lib/timetrap'
   else
+    puts "Real"
     require File.dirname(__FILE__) + '/../lib/timetrap'
   end
 end
