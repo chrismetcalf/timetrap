@@ -1,16 +1,43 @@
 module Timetrap
   module Helpers
 
+    def load_formatter(formatter)
+      err_msg = "Can't load #{formatter.inspect} formatter."
+      begin
+        paths = (
+          Array(Config['formatter_search_paths']) +
+          [ File.join( File.dirname(__FILE__), 'formatters') ]
+        )
+       if paths.detect do |path|
+           begin
+             fp = File.join(path, formatter)
+             require File.join(path, formatter)
+             true
+           rescue LoadError
+             nil
+           end
+         end
+       else
+         raise LoadError, "Couldn't find #{formatter}.rb in #{paths.inspect}"
+       end
+       Timetrap::Formatters.const_get(formatter.camelize)
+      rescue LoadError, NameError => e
+        err = e.class.new("#{err_msg} (#{e.message})")
+        err.set_backtrace(e.backtrace)
+        raise err
+      end
+    end
+
     def selected_entries
       ee = if (sheet = sheet_name_from_string(unused_args)) == 'all'
         Timetrap::Entry.filter('sheet not like ? escape "!"', '!_%')
       elsif sheet =~ /.+/
         Timetrap::Entry.filter('sheet = ?', sheet)
       else
-        Timetrap::Entry.filter('sheet = ?', Timetrap.current_sheet)
+        Timetrap::Entry.filter('sheet = ?', Timer.current_sheet)
       end
-      ee = ee.filter('start >= ?', Date.parse(args['-s'])) if args['-s']
-      ee = ee.filter('start <= ?', Date.parse(args['-e']) + 1) if args['-e']
+      ee = ee.filter('start >= ?', Date.parse(Chronic.parse(args['-s']).to_s)) if args['-s']
+      ee = ee.filter('start <= ?', Date.parse(Chronic.parse(args['-e']).to_s) + 1) if args['-e']
       ee
     end
 
@@ -49,11 +76,19 @@ module Timetrap
     end
 
     def sheet_name_from_string string
-      return "all" if string =~ /^\W*all\W*$/
-      return "" unless string =~ /.+/
-      DB[:entries].filter(:sheet.like("#{string}%")).first[:sheet]
-    rescue
-      ""
+      string = string.strip
+      case string
+      when /^\W*all\W*$/ then "all"
+      when /^$/ then Timer.current_sheet
+      else
+        entry = DB[:entries].filter(:sheet.like("#{string}")).first ||
+          DB[:entries].filter(:sheet.like("#{string}%")).first
+        if entry
+          entry[:sheet]
+        else
+          raise "Can't find sheet matching #{string.inspect}"
+        end
+      end
     end
   end
 end

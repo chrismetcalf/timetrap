@@ -4,18 +4,8 @@ Timetrap
 Timetrap is a simple command line time tracker written in ruby. It provides an
 easy to use command line interface for tracking what you spend your time on.
 
-It began as a ruby port of Trevor Caira's Timebook, a small python utility.  It
-contains several enhancement over Timebook, notably the ability to parse
-natural language times (e.g. "30 minutes ago"), additional commands such as
-`archive` and `configure`, and support for rounding.
-
-Timetrap is also able to export entries to several formats (e.g. ical, csv) and
-is designed to be easily extended to support additional export formats, by
-creating a new formatter class (in ruby.)
-
-Timetrap maintains its state in a sqlite3 database.
-
-Timetrap is available as a gem on gemcutter (http://gemcutter.org/gems/timetrap)
+Getting Started
+---------------
 
 To install:
 
@@ -23,59 +13,120 @@ To install:
 
 This will place a ``t`` executable in your path.
 
-Original Timebook available at:
-http://bitbucket.org/trevor/timebook/src/
+### Basic Usage
 
+    $ # get help
+    $ t --help
 
-Concepts
---------
+Timetrap maintains a list of *timesheets*.
 
-Timetrap maintains a list of *timesheets* -- distinct lists of timed *periods*.
-Each period has a start and end time, with the exception of the most recent
-period, which may have no end time set. This indicates that this period is
-still running. Timesheets containing such periods are considered *active*. It
-is possible to have multiple timesheets active simultaneously, though a single
-time sheet may only have one period running at once.
+    $ # create the "coding" timesheet
+    $ t sheet coding
+    Switching to sheet coding
 
-Interactions with timetrap are performed through the ``t`` command on the
-command line. ``t`` is followed by one of timetrap's subcommands.  Often used
-subcommands include ``in``, ``out``, ``switch``, ``now``, ``list`` and
-``display``. *Commands may be abbreviated as long as they are unambiguous.* thus
-``t switch foo`` and ``t s foo`` are identical.  With the default command set,
-no two commands share the first same letter, thus it is only necessary to type
-the first letter of a command.  Likewise, commands which display timesheets
-accept abbreviated timesheet names. ``t display f`` is thus equivalent to ``t
-display foo`` if ``foo`` is the only timesheet which begins with "f". Note that
-this does not apply to ``t switch``, since this command also creates
-timesheets.  (Using the earlier example, if ``t switch f`` is entered, it would
-thus be ambiguous whether a new timesheet ``f`` or switching to the existing
-timesheet ``foo`` was desired).
+All commands can be abbreviated.
 
-Usage
------
+    $ # same as "t sheet coding"
+    $ t s coding
+    Switching to sheet coding
 
-The basic usage is as follows:
+Each timesheet contains *entries*.  Each entry has a start and end time, and a
+note associated with it.  An entry without an end time set is considered to be
+running.
 
-    $ t switch writing
-    $ t in document timetrap --at "10 minutes ago"
-    $ t out
+You check in to the current sheet with the `in` command.
 
-The first command, ``t switch writing``, switches to the timesheet "writing"
-(or creates it if it does not exist). ``t in document timetrap --at "10 minutes
-ago"`` creates a new period in the current timesheet, and annotates it with the
-description "document timetrap". The optional ``--at`` flag can be passed to start
-the entry at a time other than the present.  The ``--at`` flag is able to parse
-natural language times (via Chronic: http://chronic.rubyforge.org/) and will
-understand 'friday 13:00', 'mon 2:35', '4pm', etc. (also true of the ``edit``
-command's ``--start`` and ``--end`` flags.)  Note that this command would be in
-error if the ``writing`` timesheet was already active.  Finally, ``t out``
-records the current time as the end time for the most recent period in the
-``writing`` timesheet.
+    $ # check in with "document timetrap" note
+    $ t in document timetrap
+    Checked into sheet "coding".
 
-To display the current timesheet, invoke the ``t display`` command::
+Commands like `display` and `now` will show you the running entry.
 
     $ t display
-    Timesheet: timetrap
+    Timesheet: coding
+        Day                Start      End        Duration   Notes
+        Sun Nov 28, 2010   12:26:10 -            0:00:03    document timetrap
+                                                 0:00:03
+        ---------------------------------------------------------
+        Total                                    0:00:03
+
+    $ t now
+    *coding: 0:01:02 (document timetrap)
+
+If you make a mistake use the `edit` command.
+
+    $ # edit the running entry's note
+    $ t edit writing readme
+    editing entry #42
+
+You check out with the `out` command.
+
+    $ t out
+    Checked out of sheet "coding"
+
+You can edit entries that aren't running using `edit`'s `--id` or `-i` flag.
+`t display --ids`  (or `t display -v`) will tell you the ids.
+
+    $ # note id column in output
+    $ t d -v
+    Timesheet: coding
+    Id  Day                Start      End        Duration   Notes
+    43  Sun Nov 28, 2010   12:26:10 - 13:41:03   1:14:53    writing readme
+                                                 1:14:53
+        ---------------------------------------------------------
+        Total                                    1:14:53
+
+    $ # -i43 to edit entry 43
+    $ t e -i43 --end "2010-11-28 13:45"
+    editing entry #43
+
+    $ t d
+    Timesheet: coding
+        Day                Start      End        Duration   Notes
+        Sun Nov 28, 2010   12:26:10 - 13:45:00   1:18:50    writing readme
+                                                 1:18:50
+        ---------------------------------------------------------
+        Total                                    1:18:50
+
+
+### Natural Language Times
+
+Commands such as `in`, `out`, `edit`, and `display` have flags that accept
+times as arguments.  Any time you pass Timetrap a time it will try to parse it
+as a natural language time.
+
+This is very handy if you start working and forget to start Timetrap.  You can
+check in 5 minutes ago using `in`'s `--at` flag.
+
+    $ t in --at "5 minutes ago"
+
+Command line flags also have short versions.
+
+    $ # equivilent to the command above
+    $ t i -a "5 minutes ago"
+
+You can consult the Chronic gem (http://chronic.rubyforge.org/) for a full
+list of parsable time formats, but all of these should work.
+
+    $ t out --at "in 30 minutes"
+    $ t edit --start "last monday at 10:30am"
+    $ t edit --end "tomorrow at noon"
+    $ t display --start "10am" --end "2pm"
+    $ t i -a "2010-11-29 12:30:00"
+
+### Output Formats
+
+#### Built-in Formatters
+
+Timetrap has built-in support for 5 output formats.
+
+These are **text**, **csv**, **ical**, **json**, and **ids**
+
+The default is a plain **text** format.  (You can change the default format using
+`t configure`).
+
+    $ t display
+    Timesheet: coding
         Day                Start      End        Duration   Notes
         Mon Apr 13, 2009   15:46:51 - 17:03:50   1:16:59    improved display functionality
                            17:25:59 - 17:26:02   0:00:03
@@ -83,20 +134,94 @@ To display the current timesheet, invoke the ``t display`` command::
                            22:37:38 - 23:38:43   1:01:05    work on kill
                                                  2:18:52
         Tue Apr 14, 2009   00:41:16 - 01:40:19   0:59:03    gem packaging
-                           10:20:00 - 10:48:10   0:28:10    enhance edit
+                           10:20:00 - 10:48:10   0:28:10    working on readme
                                                  1:27:13
         ---------------------------------------------------------
         Total                                    3:46:05
 
-Each period in the timesheet is listed on a row. If the timesheet is active,
-the final period in the timesheet will have no end time. After each day, the
-total time tracked in the timesheet for that day is listed. Note that this is
-computed by summing the durations of the periods beginning in the day. In the
-last row, the total time tracked in the timesheet is shown.
+The **CSV** formatters is easy to import into a spreadsheet.
+
+    $ t display --format csv
+    start,end,note,sheet
+    "2010-08-21 11:19:05","2010-08-21 12:12:04","migrated site","coding"
+    "2010-08-21 12:44:09","2010-08-21 12:48:46","DNS emails and install email packages","coding"
+    "2010-08-21 12:49:57","2010-08-21 13:10:12","A records","coding"
+    "2010-08-21 15:09:37","2010-08-21 16:32:26","setup for wiki","coding"
+    "2010-08-25 20:42:55","2010-08-25 21:41:49","rewrote index","coding"
+    "2010-08-29 15:44:39","2010-08-29 16:21:53","recaptcha","coding"
+    "2010-08-29 21:15:58","2010-08-29 21:30:31","backups","coding"
+    "2010-08-29 21:40:56","2010-08-29 22:32:26","backups","coding"
+
+**iCal** format lets you get your time into your favorite calendar program
+(remember commands can be abbreviated).
+
+    $ t d -f ical > MyTimeSheet.ics
+
+The **ids** formatter is provided to facilitate scripting within timetrap.  It only
+outputs numeric id for the entries.  This is handy if you want to move all entries
+from one sheet to another sheet.  You could do something like this:
+
+    $ for id in `t display sheet1 -f ids`; do t edit --id $id --move sheet2; done
+    editing entry #36
+    editing entry #37
+    editing entry #44
+    editing entry #46
+
+A *json* formatter is also provided, because hackers love json.
+
+    $ t d -fjson
+
+#### Custom Formatters
+
+Timetrap tries to make it easy to define custom output formats.
+
+You're encouraged to submit these back to timetrap for inclusion in a future
+version.
+
+To create a custom formatter you create a ruby class and implement two methods
+on it.
+
+As an example we'll create a formatter that only outputs the notes from
+entries.
+
+To ensure that timetrap can find your formatter put it in
+`~/.timetrap/formatters/notes.rb`.  The filename should be the same as the
+string you will pass to `t d --format` to invoke it.  If you want to put your
+formatter in a different place you can run `t configure` and edit the
+`formatter_search_paths` option.
+
+All timetrap formatters live under the namespace `Timetrap::Formatters` so
+define your class like this:
+
+    class Timetrap::Formatters::Notes
+    end
+
+When `t display` is invoked, timetrap initializes a new instance of the
+formatter passing it an Array of entries.  It then calls `#output` which should
+return a string to be printed to the screen.
+
+This means we need to implement an `#initialize` method and an `#output`
+method for the class.  Something like this:
+
+    class Timetrap::Formatters::Notes
+      def initialize(entries)
+        @entries = entries
+      end
+
+      def output
+        @entries.map{|entry| entry[:note]}.join("\n")
+      end
+    end
+
+Now when I invoke it:
+
+    $ t d -f notes
+    working on issue #123
+    working on issue #234
 
 Commands
 --------
-**archives**
+**archive**
   Archives the selected entries (by moving them to a sheet called ``_[SHEET]``)
   These entries can be seen by running ``t display _[SHEET]``.
   usage: ``t archive [--start DATE] [--end DATE] [SHEET]``
@@ -109,9 +234,9 @@ Commands
 
 **configure**
   Creates a config file at  ``~/.timetrap.yml`` or ``ENV['TIMETRAP_CONFIG_FILE']`` if
-  one doesn't exist.  Prints path to config file.  Currently allows configuration
-  of path to database file, and the number of seconds used when the `--round`
-  flag is set (defaults to 15 minutes.)
+  one doesn't exist.  If one does exist it will update it with new
+  configuration options preserving any user overrides. Prints path to config
+  file.  This file may contain ERB.
 
   usage: ``t configure``
 
@@ -123,7 +248,7 @@ Commands
 
   Display is designed to support a variety of export formats that can be
   specified by passing the ``--format`` flag.  This currently defaults to
-  text.  iCal and csv output are also supported.
+  text.  iCal, csv, json, and numeric id output are also supported.
 
   Display also allows the use of a ``--round`` or ``-r`` flag which will round
   all times in the output. See global options below.
@@ -135,11 +260,7 @@ Commands
   start or end times.  Defaults to the current time although an ``--id`` flag can
   be passed with the entry's id (see display.)
 
-  usage: ``t edit [--id ID] [--start TIME] [--end TIME] [NOTES]``
-
-**format**
-  Deprecated
-  Alias for display
+  usage: ``t edit [--id ID] [--start TIME] [--end TIME] [--append] [NOTES]``
 
 **in**
   Start the timer for the current timesheet. Must be called before out.  Notes
@@ -160,32 +281,35 @@ Commands
   usage: ``t list``
 
 **now**
-  Print the current sheet, whether it's active, and if so, how long it has been
-  active and what notes are associated with the current period.
+  Print a description of all running entries.
 
   usage: ``t now``
 
 **out**
   Stop the timer for the current timesheet. Must be called after in. Accepts an
-  optional --at flag.
+  optional --at flag. Accepts an optional TIMESHEET name to check out of a
+  running, non-current sheet.
 
-  usage: ``t out [--at TIME]``
+  usage: ``t out [--at TIME] [TIMESHEET]``
 
-**running**
-  Print all active sheets and any messages associated with them.
+**resume**
+  Start the timer for the current timesheet with the same notes as the last entry.
+  If there is no last entry the new one has blank notes ore uses the optional
+  NOTES parameter.
 
-  usage: ``t running``
+  usage: ``t resume [--at TIME] [NOTES]``
 
-**switch**
-  Switch to a new timesheet. this causes all future operation (except switch)
-  to operate on that timesheet. The default timesheet is called "default".
 
-  usage: ``t switch TIMESHEET``
+**sheet**
+  Switch to a timesheet creating it if necessary. The default timesheet is
+  called "default". When no sheet is specified list all existing sheets.
+
+  usage: ``t sheet [TIMESHEET]``
 
 **week**
   Shortcut for display with start date set to monday of this week
 
-  usage: ``t week [--ids] [--end DATE] [--format FMT] [SHEET | all]``
+  usage: ``t week [--ids] [--end DATE] [--format FMT] [TIMESHEET | all]``
 
 Global Options
 --------
@@ -198,15 +322,37 @@ Global Options
 
   See `configure` command to change rounding increment from 15 minutes.
 
+**non-interactive**
+  passing a ``--yes`` or ``-y`` flag will cause any command that requires
+  confirmation (such as ``kill``) to assume an affirmative response to any
+  prompt. This is useful when timetrap is used in a scripted environment.
+
 Configuration
 --------
 
-Configuration of TimeTrap's behavior can be done through a YAML config file.
+Configuration of TimeTrap's behavior can be done through an ERB interpolated
+YAML config file.
+
 See ``t configure`` for details.  Currently supported options are:
 
- round_in_seconds: The duration of time to use for rounding with the -r flag
+  **round_in_seconds**: The duration of time to use for rounding with the -r flag
 
- database_file: The file path of the sqlite databese
+  **database_file**: The file path of the sqlite database
+
+  **append_notes_delimiter**: delimiter used when appending notes via `t edit --append`
+
+  **formatter_search_paths**: an array of directories to search for user defined fomatter classes
+
+  **default_formatter**: The format to use when display is invoked without a `--format` option
+
+Special Thanks
+--------------
+
+The initial version of Timetrap was heavily inspired by Trevor Caira's
+Timebook, a small python utility.
+
+Original Timebook available at:
+http://bitbucket.org/trevor/timebook/src/
 
 Bugs and Feature Requests
 --------
