@@ -256,7 +256,7 @@ COMMAND is one of:
         end
       else
         victim = args['-i'] ? args['-i'].to_s.inspect : sheet.inspect
-        warn "can't find #{victim} to kill", 'sheets:', *sheets
+        warn ["can't find #{victim} to kill", 'sheets:', *sheets].join("\n")
       end
     end
 
